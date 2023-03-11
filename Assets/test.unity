@@ -436,6 +436,8 @@ MonoBehaviour:
   shadowBias: 0.0001
   shadowStrength: 1
   shadowFilterStride: 0.2
+  shadowType: 1
+  lightWidth: 0.5
 --- !u!108 &772545902
 Light:
   m_ObjectHideFlags: 0

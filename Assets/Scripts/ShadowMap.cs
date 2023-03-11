@@ -6,22 +6,34 @@ using UnityEngine.Serialization;
 
 public enum ShadowResolution
 {
-    Low=512,
-    Medium=1024,
-    High=2048
+    Low = 512,
+    Medium = 1024,
+    High = 2048
 }
+
+public enum ShadowType
+{
+    Shadow_Simple,
+    Shadow_PCF_Simple,
+    Shadow_PCF_Poisson,
+    Shadow_PCSS
+}
+
 public class ShadowMap : MonoBehaviour
 {
     [SerializeField] private ShadowResolution _resolution = ShadowResolution.Medium;
 
-    [FormerlySerializedAs("_shadowBias")] [SerializeField, Range(0, 1)] private float shadowBias = 0.0001f;
-    [FormerlySerializedAs("_shadowStrength")] [Range(0, 1)] public float shadowStrength = 1.0f;
-    [SerializeField,Range(0, 10)]
-    private float shadowFilterStride = 1.0f;
-    
+    [SerializeField, Range(0, 1)] private float shadowBias = 0.0001f;
+    [Range(0, 1)] public float shadowStrength = 1.0f;
+    [SerializeField, Range(0, 10)] private float shadowFilterStride = 1.0f;
+
+    [SerializeField] private ShadowType shadowType = ShadowType.Shadow_Simple;
+    [SerializeField,Range(0,5)] private float lightWidth=0.5f;
+
     private Shader _shadowMakerShader;
     private GameObject _lightCameraObj;
     private RenderTexture _shadowMapRt;
+
     private Camera _lightCamera;
     // Start is called before the first frame update
 
@@ -33,7 +45,6 @@ public class ShadowMap : MonoBehaviour
 
     void Start()
     {
-        
     }
 
     // Update is called once per frame
@@ -41,22 +52,31 @@ public class ShadowMap : MonoBehaviour
     {
         Matrix4x4 projectionMatrix = GL.GetGPUProjectionMatrix(_lightCamera.projectionMatrix, false);
         Shader.SetGlobalMatrix("_gWorldToShadow", projectionMatrix * _lightCamera.worldToCameraMatrix);
-        
+
         Shader.SetGlobalFloat("_gShadowStrength", shadowStrength);
         Shader.SetGlobalFloat("_gShadow_bias", shadowBias);
         Shader.SetGlobalFloat("_gShadowFilterStride", shadowFilterStride);
-        
+        Shader.SetGlobalFloat("_gLightWidth",lightWidth);
+
         Shader.SetGlobalTexture("_gShadowMapTexture", _shadowMapRt);
-        
-        
+
+        string shadowTypeName = Enum.GetName(typeof(ShadowType), shadowType);
+        foreach (var type in Enum.GetNames(typeof(ShadowType)))
+        {
+            if (type == shadowTypeName)
+                Shader.EnableKeyword(type);
+            else
+                Shader.DisableKeyword(type);
+        }
     }
-    
+
     void Clean()
     {
         for (int i = 0; i < transform.childCount; i++)
         {
             DestroyImmediate(transform.GetChild(0).gameObject);
         }
+
         RenderTexture.ReleaseTemporary(_shadowMapRt);
     }
 
@@ -64,12 +84,12 @@ public class ShadowMap : MonoBehaviour
     {
         _lightCameraObj = new GameObject("Directional Light Cam");
         _lightCameraObj.transform.parent = transform;
-        _lightCameraObj.transform.localPosition=Vector3.zero;
-        _lightCameraObj.transform.localScale=Vector3.zero;
-        _lightCameraObj.transform.localEulerAngles=Vector3.zero;
+        _lightCameraObj.transform.localPosition = Vector3.zero;
+        _lightCameraObj.transform.localScale = Vector3.zero;
+        _lightCameraObj.transform.localEulerAngles = Vector3.zero;
 
         _lightCamera = _lightCameraObj.AddComponent<Camera>();
-        _lightCamera.backgroundColor=Color.white;
+        _lightCamera.backgroundColor = Color.white;
         _lightCamera.clearFlags = CameraClearFlags.SolidColor;
         _lightCamera.orthographic = true;
         _lightCamera.orthographicSize = 10f;
@@ -79,9 +99,9 @@ public class ShadowMap : MonoBehaviour
         _lightCamera.targetTexture = CreateRenderTexture(_lightCamera);
 
 
-        if (_shadowMakerShader==null)
+        if (_shadowMakerShader == null)
         {
-            _shadowMakerShader=Shader.Find("Custom/ShadowMaker");
+            _shadowMakerShader = Shader.Find("Custom/ShadowMaker");
         }
 
         _lightCamera.SetReplacementShader(_shadowMakerShader, "");
@@ -105,9 +125,8 @@ public class ShadowMap : MonoBehaviour
 
         _shadowMapRt = RenderTexture.GetTemporary(resolution, resolution, 64, textureFormatRt);
         _shadowMapRt.hideFlags = HideFlags.DontSave;
-        
-        Shader.SetGlobalTexture("_gShadowMapTexture",_shadowMapRt);
-        return _shadowMapRt;
 
+        Shader.SetGlobalTexture("_gShadowMapTexture", _shadowMapRt);
+        return _shadowMapRt;
     }
 }

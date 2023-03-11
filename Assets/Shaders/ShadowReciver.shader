@@ -97,14 +97,13 @@ Shader "Custom/ShadowReciver"
             {
                 createPoissonDisk(coords.xy);
 
-                float curDepth = coords.z;
+                //float curDepth = coords.z;
                 float shadow = 0.0;
                 float2 offset = _gShadowMapTexture_TexelSize.xy * _gShadowFilterStride;
                 for(int i=0;i<NUM_SAMPLES;i++)
                 {
                     float2 poissonCoords=poissonDisk[i]*offset+coords.xy;
-                    float texDepth=DecodeFloatRGBA(tex2D(_gShadowMapTexture,poissonCoords));
-                    shadow+=curDepth-_gShadow_bias>texDepth?0.0:1.0;
+                    shadow+=useShadowMap(_gShadowMapTexture,float4(poissonCoords.xy,coords.zw));
                 }
                 shadow/=float(NUM_SAMPLES);
 
@@ -148,6 +147,10 @@ Shader "Custom/ShadowReciver"
             }
 
 
+
+
+
+            
             v2f vert(appdata_full v)
             {
                 v2f o;
